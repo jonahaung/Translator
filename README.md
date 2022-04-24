@@ -1,3 +1,3 @@
 # Translator
 
-A description of this package.
+Hacked (free & unlimited) Language Translator
