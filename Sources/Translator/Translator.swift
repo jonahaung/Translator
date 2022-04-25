@@ -12,36 +12,56 @@ public struct Translator {
     
     struct API {
         static let base = "https://api.mymemory.translated.net/get?"
-        struct translate {
-            static let method = "GET"
+        struct Translate {
+            static let httpMethod = "GET"
             static let url = API.base
+            
+        
+            struct QueryItem {
+                static func text(for value: String) -> URLQueryItem {
+                    URLQueryItem(name: "q", value: value.lowercased())
+                }
+                static func languagePair(from fromLangeuage: NLLanguage, to toLanguage: NLLanguage) -> URLQueryItem {
+                    URLQueryItem(name: "langpair", value: "\(fromLangeuage.rawValue)|\(toLanguage.rawValue)")
+                }
+                static func translatorType() -> URLQueryItem {
+                    URLQueryItem(name: "mt", value: "1")
+                }
+                static func ipAddress(for value: String) -> URLQueryItem {
+                    URLQueryItem(name: "ip", value: value)
+                }
+                static func email(for value: String) -> URLQueryItem {
+                    URLQueryItem(name: "de", value: value)
+                }
+            }
         }
     }
     
     public static let shared = Translator()
     
+    public init() {
+        
+    }
+    
     public func translate(text: String, from: NLLanguage, to: NLLanguage,  _ completion: @escaping (String?) -> Void) {
-        let textQueryItem = URLQueryItem(name: "q", value: text.lowercased())
-        let languageQueryItem = URLQueryItem(name: "langpair", value: "\(from.rawValue)|\(to.rawValue)")
-        let machineQueryItem = URLQueryItem(name: "mt", value: "1")
-        var queyItems = [textQueryItem, languageQueryItem, machineQueryItem]
+    
+        var queyItems = [API.Translate.QueryItem.text(for: text), API.Translate.QueryItem.languagePair(from: from, to: to), API.Translate.QueryItem.translatorType()]
         if let wifiiAddress = getWiFiAddress() {
-            let ipQueryItem = URLQueryItem(name: "ip", value: wifiiAddress)
-            queyItems.append(ipQueryItem)
+            queyItems.append(API.Translate.QueryItem.ipAddress(for: wifiiAddress))
         }
-        let emailQueryItem = URLQueryItem(name: "de", value: RandomEmailAddress.emailAddress)
-        queyItems.append(emailQueryItem)
-        var urlComponents = URLComponents(string: API.translate.url)!
+        queyItems.append(API.Translate.QueryItem.email(for: RandomEmailAddress.emailAddress))
+       
+        var urlComponents = URLComponents(string: API.Translate.url)!
         urlComponents.queryItems = queyItems
         var urlRequest = URLRequest(url: urlComponents.url!)
-        urlRequest.httpMethod = API.translate.method
+        urlRequest.httpMethod = API.Translate.httpMethod
         
         URLSession(configuration: .default).dataTask(with: urlRequest) { (data, response, error) in
-            guard let data = data, let response = response as? HTTPURLResponse, (200 ..< 300) ~= response.statusCode, error == nil else {
-                completion(nil)
-                return
-            }
             guard
+                let response = response as? HTTPURLResponse,
+                (200 ..< 300) ~= response.statusCode,
+                error == nil,
+                let data = data,
                 let string = String(data: data, encoding: .utf8),
                 let dataString = string.data(using: .utf8),
                 let json = try? JSONSerialization.jsonObject(with: dataString , options: []),
@@ -51,9 +71,7 @@ public struct Translator {
                 completion(text)
                 return
             }
-            
-            let lowerCased = translated.lowercased()
-            completion(lowerCased)
+            completion(translated.lowercased())
         }.resume()
     }
     
