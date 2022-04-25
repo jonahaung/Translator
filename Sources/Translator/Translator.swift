@@ -16,7 +16,7 @@ public struct Translator {
             static let httpMethod = "GET"
             static let url = API.base
             
-        
+            
             struct QueryItem {
                 static func text(for value: String) -> URLQueryItem {
                     URLQueryItem(name: "q", value: value.lowercased())
@@ -44,13 +44,13 @@ public struct Translator {
     }
     
     public func translate(text: String, from: NLLanguage, to: NLLanguage,  _ completion: @escaping (String?) -> Void) {
-    
+        
         var queyItems = [API.Translate.QueryItem.text(for: text), API.Translate.QueryItem.languagePair(from: from, to: to), API.Translate.QueryItem.translatorType()]
         if let wifiiAddress = getWiFiAddress() {
             queyItems.append(API.Translate.QueryItem.ipAddress(for: wifiiAddress))
         }
         queyItems.append(API.Translate.QueryItem.email(for: RandomEmailAddress.emailAddress))
-       
+        
         var urlComponents = URLComponents(string: API.Translate.url)!
         urlComponents.queryItems = queyItems
         var urlRequest = URLRequest(url: urlComponents.url!)
