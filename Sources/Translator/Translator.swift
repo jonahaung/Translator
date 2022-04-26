@@ -8,7 +8,7 @@
 import Foundation
 import NaturalLanguage
 
-public struct Translator {
+public class Translator {
     
     struct API {
         static let base = "https://api.mymemory.translated.net/get?"
