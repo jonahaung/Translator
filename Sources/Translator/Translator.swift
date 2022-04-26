@@ -38,25 +38,37 @@ public struct Translator {
     }
     
     public static let shared = Translator()
+    private let session = URLSession.shared
     
     public init() {
         
     }
     
+    
+    @available(iOS 15.0.0, *)
+    public func translate(text: String, from: NLLanguage, to: NLLanguage) async -> String? {
+        let urlRequest = urlRequest(text: text, from: from, to: to)
+        do {
+            let (data, _) = try await session.data(for: urlRequest)
+            guard let string = String(data: data, encoding: .utf8),
+                  let dataString = string.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: dataString , options: []),
+                  let dictionary = json as? [String: Any],
+                  let responseData = dictionary["responseData"] as? NSDictionary,
+                  let translated = responseData["translatedText"] as? String else {
+                return nil
+            }
+            return translated.lowercased()
+        } catch {
+            return nil
+        }
+    }
+    
     public func translate(text: String, from: NLLanguage, to: NLLanguage,  _ completion: @escaping (String?) -> Void) {
         
-        var queyItems = [API.Translate.QueryItem.text(for: text), API.Translate.QueryItem.languagePair(from: from, to: to), API.Translate.QueryItem.translatorType()]
-        if let wifiiAddress = getWiFiAddress() {
-            queyItems.append(API.Translate.QueryItem.ipAddress(for: wifiiAddress))
-        }
-        queyItems.append(API.Translate.QueryItem.email(for: RandomEmailAddress.emailAddress))
+        let urlRequest = urlRequest(text: text, from: from, to: to)
         
-        var urlComponents = URLComponents(string: API.Translate.url)!
-        urlComponents.queryItems = queyItems
-        var urlRequest = URLRequest(url: urlComponents.url!)
-        urlRequest.httpMethod = API.Translate.httpMethod
-        
-        URLSession(configuration: .default).dataTask(with: urlRequest) { (data, response, error) in
+        session.dataTask(with: urlRequest) { (data, response, error) in
             guard
                 let response = response as? HTTPURLResponse,
                 (200 ..< 300) ~= response.statusCode,
@@ -73,6 +85,20 @@ public struct Translator {
             }
             completion(translated.lowercased())
         }.resume()
+    }
+    
+    private func urlRequest(text: String, from: NLLanguage, to: NLLanguage) -> URLRequest {
+        var queyItems = [API.Translate.QueryItem.text(for: text), API.Translate.QueryItem.languagePair(from: from, to: to), API.Translate.QueryItem.translatorType()]
+        if let wifiiAddress = getWiFiAddress() {
+            queyItems.append(API.Translate.QueryItem.ipAddress(for: wifiiAddress))
+        }
+        queyItems.append(API.Translate.QueryItem.email(for: RandomEmailAddress.emailAddress))
+        
+        var urlComponents = URLComponents(string: API.Translate.url)!
+        urlComponents.queryItems = queyItems
+        var request = URLRequest(url: urlComponents.url!)
+        request.httpMethod = API.Translate.httpMethod
+        return request
     }
     
     private func getWiFiAddress() -> String? {
